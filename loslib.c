@@ -15,6 +15,11 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#include <spawn.h>
+#include <sys/types.h>
+#include <sys/wait.h>
+#include <stdio.h>
+
 
 #include "lua.h"
 
@@ -135,12 +140,28 @@ static time_t l_checktime (lua_State *L, int arg) {
 #endif				/* } */
 /* }================================================================== */
 
+extern char **environ;
 
+static int os_run_cmd(const char *cmd)
+{
+    pid_t pid;
+    const char *argv[] = {"sh", "-c", cmd, NULL};
+    int status;
+    
+    status = posix_spawn(&pid, "/bin/sh", NULL, NULL, argv, environ);
+    if (status == 0) {
+        if (waitpid(pid, &status, 0) == -1) {
+            perror("waitpid");
+        }
+    }
+
+    return status;
+}
 
 
 static int os_execute (lua_State *L) {
   const char *cmd = luaL_optstring(L, 1, NULL);
-  int stat = system(cmd);
+  int stat = os_run_cmd(cmd);
   if (cmd != NULL)
     return luaL_execresult(L, stat);
   else {
