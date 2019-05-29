@@ -15,11 +15,13 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+
+#ifdef LUA_USE_POSIX_SPAWN
 #include <spawn.h>
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <stdio.h>
-
+#endif
 
 #include "lua.h"
 
@@ -142,6 +144,7 @@ static time_t l_checktime (lua_State *L, int arg) {
 
 extern char **environ;
 
+#ifdef LUA_USE_POSIX_SPAWN
 static int os_run_cmd(const char *cmd)
 {
     pid_t pid;
@@ -157,11 +160,16 @@ static int os_run_cmd(const char *cmd)
 
     return status;
 }
+#endif
 
 
 static int os_execute (lua_State *L) {
   const char *cmd = luaL_optstring(L, 1, NULL);
+#ifdef LUA_USE_POSIX_SPAWN
   int stat = os_run_cmd(cmd);
+#else
+  int stat = system(cmd);
+#endif
   if (cmd != NULL)
     return luaL_execresult(L, stat);
   else {
@@ -169,7 +177,6 @@ static int os_execute (lua_State *L) {
     return 1;
   }
 }
-
 
 static int os_remove (lua_State *L) {
   const char *filename = luaL_checkstring(L, 1);
