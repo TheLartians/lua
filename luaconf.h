@@ -782,7 +782,19 @@
 ** without modifying the main part of the file.
 */
 
+/**
+ * This adds support for mobile operating systems without `system()`
+ * Taken from: http://lua-users.org/lists/lua-l/2017-09/msg00242.html
+ */
+#if defined(__APPLE__)
+     #include "TargetConditionals.h"
+     #if TARGET_OS_IOS || TARGET_OS_WATCH || TARGET_OS_TV
+         #define system(s) ((s)==NULL ? 0 : -1)
+     #endif // end iOS
+#elif defined(__ANDROID__)
+     #define system(s) ((s)==NULL ? 0 : -1)
 
+#endif
 
 
 
