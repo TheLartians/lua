@@ -16,6 +16,13 @@
 #include <string.h>
 #include <time.h>
 
+#ifdef LUA_USE_POSIX_SPAWN
+#include <spawn.h>
+#include <sys/types.h>
+#include <sys/wait.h>
+#include <stdio.h>
+#endif
+
 #include "lua.h"
 
 #include "lauxlib.h"
@@ -137,13 +144,33 @@
 #endif				/* } */
 /* }================================================================== */
 
+extern char **environ;
 
+#ifdef LUA_USE_POSIX_SPAWN
+static int os_run_cmd(const char *cmd)
+{
+    pid_t pid;
+    const char *argv[] = {"sh", "-c", cmd, NULL};
+    int status;
+    
+    status = posix_spawn(&pid, "/bin/sh", NULL, NULL, argv, environ);
+    if (status == 0) {
+        if (waitpid(pid, &status, 0) == -1) {
+            perror("waitpid");
+        }
+    }
+
+    return status;
+}
+#endif
 
 static int os_execute (lua_State *L) {
   const char *cmd = luaL_optstring(L, 1, NULL);
-  int stat;
-  errno = 0;
-  stat = system(cmd);
+#ifdef LUA_USE_POSIX_SPAWN
+  int stat = os_run_cmd(cmd);
+#else
+  int stat = system(cmd);
+#endif
   if (cmd != NULL)
     return luaL_execresult(L, stat);
   else {
@@ -151,7 +178,6 @@ static int os_execute (lua_State *L) {
     return 1;
   }
 }
-
 
 static int os_remove (lua_State *L) {
   const char *filename = luaL_checkstring(L, 1);
